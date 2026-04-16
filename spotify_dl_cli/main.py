@@ -174,6 +174,9 @@ def main() -> None:
         else:
             output_dir = Path(_album_dir_name(track))
 
+        if track.album and len(track.album.disc) > 1:
+            output_dir = output_dir / f"Disc {track.disc_number}"
+
         if not output_dir.exists():
             logger.debug("Creating output directory: %s", output_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
