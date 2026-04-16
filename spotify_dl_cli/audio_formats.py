@@ -77,8 +77,11 @@ QUALITY_PRIORITY: Final[tuple[AudioFile.Format, ...]] = (
 )
 
 
-def select_highest_format(available: Iterable[AudioFile.Format]) -> AudioFile.Format | None:
-    available_set = set(available)
+def select_highest_format(
+    available: Iterable[AudioFile.Format],
+    ignore: Iterable[AudioFile.Format] = (),
+) -> AudioFile.Format | None:
+    available_set = set(available) - set(ignore)
     return next((fmt for fmt in QUALITY_PRIORITY if fmt in available_set), None)
 
 
