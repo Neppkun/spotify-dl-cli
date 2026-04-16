@@ -1,5 +1,9 @@
 import logging
+import os
 import re
+import subprocess
+import sys
+import tempfile
 from datetime import timedelta
 from pathlib import Path
 
@@ -54,10 +58,56 @@ def _album_dir_name(track) -> str:
     return _slugify(name)
 
 
+_BULK_TEMPLATE = """\
+# spotify-dl-cli bulk download
+# Paste Spotify URLs or URIs below, one per line.
+# Lines starting with '#' and blank lines are ignored.
+# Example:
+#   https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh
+#   spotify:album:4LH4d3cOWNNsVw41Gqt2kv
+"""
+
+
+def _open_bulk_editor() -> list[str]:
+    """Open a text editor for the user to paste Spotify URLs/URIs. Returns the non-empty, non-comment lines."""
+    editor = os.environ.get("EDITOR") or os.environ.get("VISUAL")
+    if not editor:
+        editor = "notepad" if sys.platform == "win32" else "nano"
+
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".txt",
+        prefix="spotify_dl_bulk_",
+        delete=False,
+        encoding="utf-8",
+    ) as tmp:
+        tmp.write(_BULK_TEMPLATE)
+        tmp_path = tmp.name
+
+    try:
+        subprocess.run([editor, tmp_path], check=True)
+        lines = Path(tmp_path).read_text(encoding="utf-8").splitlines()
+    finally:
+        try:
+            Path(tmp_path).unlink()
+        except OSError:
+            pass
+
+    return [line.strip() for line in lines if line.strip() and not line.strip().startswith("#")]
+
+
 def main() -> None:
     args = parse_args()
 
     logging.basicConfig(level=getattr(logging, args.log_level), format="%(levelname)s: %(message)s")
+
+    if args.bulk:
+        uris = _open_bulk_editor()
+        if not uris:
+            logger.error("No URLs/URIs entered in bulk editor")
+            raise SystemExit(1)
+    else:
+        uris = args.uris
 
     fixed_output_dir = Path(args.output_dir) if args.output_dir else None
 
@@ -96,7 +146,7 @@ def main() -> None:
     playplay = PlayplayClient(sp_client_base, PLAYPLAY_TOKEN, client)
     playlist_client = PlaylistClient(sp_client_base, client)
 
-    all_track_uris = resolve_track_uris(args.uris, playlist_client, metadata)
+    all_track_uris = resolve_track_uris(uris, playlist_client, metadata)
 
     if not all_track_uris:
         logger.error("No tracks resolved")

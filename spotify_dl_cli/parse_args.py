@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("uris", nargs="+", help="Spotify URIs (track or playlist)")
+    parser.add_argument("uris", nargs="*", help="Spotify URIs or URLs (track, album, or playlist)")
 
     parser.add_argument("--quality", choices=(*CLI_FORMATS, "highest"), default="ogg-vorbis-160")
 
@@ -44,6 +44,12 @@ def parse_args() -> argparse.Namespace:
         help="Download the album cover art as cover.jpg into the output folder.",
     )
 
+    parser.add_argument(
+        "--bulk",
+        action="store_true",
+        help="Open a text editor to paste multiple Spotify URLs/URIs, one per line.",
+    )
+
     parser.add_argument("--log-level", default="INFO", choices=LOG_LEVEL_CHOICES, help="Log level")
 
     parser.add_argument(
@@ -52,6 +58,12 @@ def parse_args() -> argparse.Namespace:
     )
 
     args = parser.parse_args()
+
+    if not args.uris and not args.bulk:
+        parser.error("provide at least one URI/URL or use --bulk")
+
+    if args.uris and args.bulk:
+        parser.error("--bulk cannot be combined with positional URIs")
 
     if args.ignore_formats and args.quality != "highest":
         parser.error("--ignore-formats can only be used with --quality highest")
