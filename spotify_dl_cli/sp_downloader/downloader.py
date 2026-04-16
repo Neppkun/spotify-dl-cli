@@ -9,6 +9,7 @@ from spotify_dl_cli.audio_formats import (
     VORBIS_FORMATS,
     format_to_cli,
     format_to_extension,
+    select_highest_format,
 )
 from spotify_dl_cli.clt_extended_metadata.audio_files_extension_pb2 import (
     AudioFilesExtensionResponse,
@@ -95,7 +96,7 @@ def download_track(
     resolver: StorageResolverClient,
     playplay: PlayplayClient,
     keygen: KeyEmu,
-    audio_format: AudioFile.Format,
+    audio_format: AudioFile.Format | None,
     track_filename_template: str,
 ) -> None:
     logger.debug(
@@ -103,13 +104,22 @@ def download_track(
         [fmt for f in audio_files.files if (fmt := format_to_cli(f.file.format)) is not None],
     )
 
-    extended_file: ExtendedAudioFile | None = next(
-        (f for f in audio_files.files if f.file.format == audio_format), None
-    )
-
-    if not extended_file:
-        logger.warning("Audio format unavailable, skipping track")
-        return
+    if audio_format is None:
+        chosen_format = select_highest_format(f.file.format for f in audio_files.files)
+        if chosen_format is None:
+            logger.warning("No supported audio format available, skipping track")
+            return
+        extended_file: ExtendedAudioFile = next(
+            f for f in audio_files.files if f.file.format == chosen_format
+        )
+    else:
+        extended_file_or_none: ExtendedAudioFile | None = next(
+            (f for f in audio_files.files if f.file.format == audio_format), None
+        )
+        if not extended_file_or_none:
+            logger.warning("Audio format unavailable, skipping track")
+            return
+        extended_file = extended_file_or_none
 
     file = extended_file.file
 

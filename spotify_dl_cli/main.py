@@ -52,7 +52,7 @@ def main() -> None:
 
     token_manager = SpotifyTokenManager(CLIENT_ID, tokens_file, auth_pkce)
 
-    audio_format = cli_to_format(args.quality)
+    audio_format = None if args.quality == "highest" else cli_to_format(args.quality)
 
     exe_path = bundled_dll_path()
     logger.debug("Using sp_client dll: %s", exe_path)
