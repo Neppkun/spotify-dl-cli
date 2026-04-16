@@ -23,6 +23,15 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--quality", choices=(*CLI_FORMATS, "highest"), default="ogg-vorbis-160")
 
+    parser.add_argument(
+        "--ignore-formats",
+        nargs="+",
+        choices=CLI_FORMATS,
+        default=[],
+        metavar="FORMAT",
+        help="Formats to skip when using --quality highest (e.g. flac-flac-24bit mp4-flac-24bit)",
+    )
+
     parser.add_argument("--output-dir", default="music")
 
     parser.add_argument("--log-level", default="INFO", choices=LOG_LEVEL_CHOICES, help="Log level")
@@ -32,4 +41,9 @@ def parse_args() -> argparse.Namespace:
         default="{track.name}_{track.album.name}_{track.artist[0].name}",
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if args.ignore_formats and args.quality != "highest":
+        parser.error("--ignore-formats can only be used with --quality highest")
+
+    return args

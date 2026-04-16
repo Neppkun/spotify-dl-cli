@@ -98,6 +98,7 @@ def download_track(
     keygen: KeyEmu,
     audio_format: AudioFile.Format | None,
     track_filename_template: str,
+    ignore_formats: set[AudioFile.Format] | None = None,
 ) -> None:
     logger.debug(
         "Available formats: %s",
@@ -105,7 +106,10 @@ def download_track(
     )
 
     if audio_format is None:
-        chosen_format = select_highest_format(f.file.format for f in audio_files.files)
+        chosen_format = select_highest_format(
+            (f.file.format for f in audio_files.files),
+            ignore=ignore_formats or (),
+        )
         if chosen_format is None:
             logger.warning("No supported audio format available, skipping track")
             return
