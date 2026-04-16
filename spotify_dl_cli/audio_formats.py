@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from enum import Enum, auto
 from typing import Final, cast
 
@@ -63,6 +64,22 @@ def cli_to_format(value: str) -> AudioFile.Format:
 
 def format_to_cli(value: AudioFile.Format) -> str | None:
     return _AUDIO_FORMATS_REVERSE.get(value)
+
+
+QUALITY_PRIORITY: Final[tuple[AudioFile.Format, ...]] = (
+    AudioFile.FLAC_FLAC_24BIT,
+    AudioFile.MP4_FLAC_24BIT,
+    AudioFile.FLAC_FLAC,
+    AudioFile.MP4_FLAC,
+    AudioFile.OGG_VORBIS_320,
+    AudioFile.OGG_VORBIS_160,
+    AudioFile.OGG_VORBIS_96,
+)
+
+
+def select_highest_format(available: Iterable[AudioFile.Format]) -> AudioFile.Format | None:
+    available_set = set(available)
+    return next((fmt for fmt in QUALITY_PRIORITY if fmt in available_set), None)
 
 
 def format_to_codec(fmt: AudioFile.Format) -> Codec:

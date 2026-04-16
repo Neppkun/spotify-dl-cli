@@ -21,7 +21,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("uris", nargs="+", help="Spotify URIs (track or playlist)")
 
-    parser.add_argument("--quality", choices=CLI_FORMATS, default="ogg-vorbis-160")
+    parser.add_argument("--quality", choices=(*CLI_FORMATS, "highest"), default="ogg-vorbis-160")
 
     parser.add_argument("--output-dir", default="music")
 
