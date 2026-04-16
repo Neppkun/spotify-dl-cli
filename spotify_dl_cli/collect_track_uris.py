@@ -3,7 +3,7 @@ from collections.abc import Iterable
 
 from spotify_dl_cli.clt_extended_metadata.extended_metadata_client import ExtendedMetadataClient
 from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
-from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
+from spotify_dl_cli.spotify_uri_helpers import normalise_spotify_input, parse_spotify_uri
 
 logger = logging.getLogger(__name__)
 
@@ -15,11 +15,12 @@ def resolve_track_uris(
 ) -> set[str]:
     all_track_uris: set[str] = set()
 
-    for uri in uris:
+    for raw in uris:
+        uri = normalise_spotify_input(raw)
         try:
             resource_type, _ = parse_spotify_uri(uri)
         except (TypeError, ValueError) as e:
-            logger.error("Invalid URI: %s (%s)", uri, e)
+            logger.error("Invalid URI: %s (%s)", raw, e)
             continue
 
         if resource_type == "track":
