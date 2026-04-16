@@ -156,6 +156,12 @@ def main() -> None:
 
     covers_saved: set[Path] = set()
 
+    multi_disc_album_gids: set[bytes] = {
+        track.album.gid
+        for _uri, (track, _) in tracks.items()
+        if track.disc_number > 1 and track.album and track.album.gid
+    }
+
     for uri, (track, audio_files) in tracks.items():
         duration_str = precisedelta(timedelta(milliseconds=track.duration))
 
@@ -174,7 +180,7 @@ def main() -> None:
         else:
             output_dir = Path(_album_dir_name(track))
 
-        if track.album and len(track.album.disc) > 1:
+        if track.album and track.album.gid in multi_disc_album_gids:
             output_dir = output_dir / f"Disc {track.disc_number}"
 
         if not output_dir.exists():
