@@ -9,6 +9,7 @@ from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
 
 from .extendedmetadata_pb2 import (
+    Album,
     BatchedEntityRequest,
     BatchedExtensionResponse,
     EntityRequest,
@@ -16,6 +17,7 @@ from .extendedmetadata_pb2 import (
     ExtensionQuery,
     Track,
 )
+from .helpers import track_gid_to_uri
 
 
 class ExtendedMetadataClient:
@@ -37,6 +39,36 @@ class ExtendedMetadataClient:
 
         response = self._http.post_protobuf(url, payload)
         return self._parse_tracks_response(response.content)
+
+    def fetch_album_track_uris(self, album_uri: str) -> list[str]:
+        parse_spotify_uri(album_uri, expected_type="album")
+        payload = self._build_album_request(album_uri)
+        url = self._build_url()
+        response = self._http.post_protobuf(url, payload)
+        return self._parse_album_track_uris(response.content)
+
+    @staticmethod
+    def _build_album_request(album_uri: str) -> bytes:
+        request = BatchedEntityRequest()
+        request.header.task_id = uuid.uuid4().bytes
+        album_query = ExtensionQuery(extension_kind=ExtensionKind.ALBUM_V4)
+        request.entity_request.append(EntityRequest(entity_uri=album_uri, query=[album_query]))
+        return request.SerializeToString()
+
+    @staticmethod
+    def _parse_album_track_uris(blob: bytes) -> list[str]:
+        response = BatchedExtensionResponse()
+        response.ParseFromString(blob)
+        track_uris: list[str] = []
+        for group in response.extended_metadata:
+            if group.extension_kind == ExtensionKind.ALBUM_V4:
+                for entity in group.extension_data:
+                    album = Album()
+                    album.ParseFromString(entity.extension_data.value)
+                    for disc in album.disc:
+                        for track in disc.track:
+                            track_uris.append(track_gid_to_uri(track.gid))
+        return track_uris
 
     def _build_url(self) -> str:
         return urljoin(self._base_url, self._ENDPOINT_PATH)
