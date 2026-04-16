@@ -32,7 +32,17 @@ def parse_args() -> argparse.Namespace:
         help="Formats to skip when using --quality highest (e.g. flac-flac-24bit mp4-flac-24bit)",
     )
 
-    parser.add_argument("--output-dir", default="music")
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Output directory. Defaults to '{artist} - {album} ({year})' in the current directory.",
+    )
+
+    parser.add_argument(
+        "--include-cover",
+        action="store_true",
+        help="Download the album cover art as cover.jpg into the output folder.",
+    )
 
     parser.add_argument("--log-level", default="INFO", choices=LOG_LEVEL_CHOICES, help="Log level")
 

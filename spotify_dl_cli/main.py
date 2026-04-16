@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import timedelta
 from pathlib import Path
 
@@ -23,10 +24,34 @@ from spotify_dl_cli.resolve_exe_path import bundled_dll_path
 from spotify_dl_cli.service_resolver import resolve_spotify_endpoints
 from spotify_dl_cli.sp_auth.constants import CLIENT_ID
 from spotify_dl_cli.sp_auth.pkce import SpotifyAuthPKCE
+from spotify_dl_cli.sp_downloader.apply_metadata import _download_largest_cover
 from spotify_dl_cli.sp_downloader.downloader import download_track
 from spotify_dl_cli.token_manager import SpotifyTokenManager
 
 logger = logging.getLogger(__name__)
+
+_INVALID_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
+
+
+def _slugify(value: str) -> str:
+    value = _INVALID_CHARS_RE.sub("", value)
+    return value.strip(" ._-")
+
+
+def _album_dir_name(track) -> str:
+    if track.album and track.album.artist:
+        artist = track.album.artist[0].name
+    elif track.artist:
+        artist = track.artist[0].name
+    else:
+        artist = "Unknown Artist"
+
+    album = track.album.name if track.album and track.album.name else "Unknown Album"
+
+    year = track.album.date.year if track.album and track.album.date and track.album.date.year else None
+
+    name = f"{artist} - {album}" if not year else f"{artist} - {album} ({year})"
+    return _slugify(name)
 
 
 def main() -> None:
@@ -34,11 +59,7 @@ def main() -> None:
 
     logging.basicConfig(level=getattr(logging, args.log_level), format="%(levelname)s: %(message)s")
 
-    base_dir = Path(args.output_dir)
-
-    if not base_dir.exists():
-        logger.debug("Output directory does not exist. Creating: %s", base_dir)
-        base_dir.mkdir(parents=True, exist_ok=True)
+    fixed_output_dir = Path(args.output_dir) if args.output_dir else None
 
     # OAuth 2.0 + PKCE
     auth_pkce = SpotifyAuthPKCE(
@@ -83,6 +104,8 @@ def main() -> None:
 
     tracks = metadata.fetch_tracks(all_track_uris)
 
+    covers_saved: set[Path] = set()
+
     for uri, (track, audio_files) in tracks.items():
         duration_str = precisedelta(timedelta(milliseconds=track.duration))
 
@@ -96,9 +119,27 @@ def main() -> None:
             logger.debug("Track has no file, using alternative with GID: %s", track.alternative[0].gid)
             track, audio_files = metadata.fetch_track(track_gid_to_uri(track.alternative[0].gid))
 
+        if fixed_output_dir is not None:
+            output_dir = fixed_output_dir
+        else:
+            output_dir = Path(_album_dir_name(track))
+
+        if not output_dir.exists():
+            logger.debug("Creating output directory: %s", output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+        if args.include_cover:
+            cover_path = output_dir / "cover.jpg"
+            if cover_path not in covers_saved and not cover_path.exists():
+                cover_bytes = _download_largest_cover(track, client)
+                if cover_bytes:
+                    cover_path.write_bytes(cover_bytes)
+                    logger.info("Saved cover art : %s", cover_path)
+            covers_saved.add(cover_path)
+
         download_track(
             client,
-            base_dir,
+            output_dir,
             track,
             audio_files,
             resolver,
