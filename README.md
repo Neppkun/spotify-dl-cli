@@ -128,6 +128,7 @@ Controls the output filename (without extension) for each downloaded track. Expr
 | `{track.album.artist[0].name}` | First album artist name |
 | `{track.disc_number}` | Disc number |
 | `{track.number}` | Track number |
+| `{track.number.padded}` | Track number zero-padded to 2 digits (e.g. `01`, `02`, `10`) |
 | `{track.album.date.year}` | Release year |
 
 Characters that are invalid in filenames are stripped automatically.

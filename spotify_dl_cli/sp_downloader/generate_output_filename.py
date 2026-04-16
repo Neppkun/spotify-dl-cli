@@ -56,9 +56,17 @@ def generate_output_filename(track: Track, template: str) -> str:
         if not expr.startswith(_PREFIX):
             raise ValueError(f"Template expressions must start with '{_PREFIX}'")
 
-        value = _resolve_attr(track, expr[len(_PREFIX) :])
+        padded = expr.endswith(".padded")
+        attr_path = expr[len(_PREFIX) : -len(".padded")] if padded else expr[len(_PREFIX) :]
 
-        if not isinstance(value, str):
+        value = _resolve_attr(track, attr_path)
+
+        if padded:
+            try:
+                value = f"{int(value):02d}"
+            except (ValueError, TypeError):
+                value = str(value)
+        elif not isinstance(value, str):
             value = str(value)
 
         return _slugify(value)
