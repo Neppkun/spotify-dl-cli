@@ -74,7 +74,7 @@ def main() -> None:
     playplay = PlayplayClient(sp_client_base, PLAYPLAY_TOKEN, client)
     playlist_client = PlaylistClient(sp_client_base, client)
 
-    all_track_uris = resolve_track_uris(args.uris, playlist_client)
+    all_track_uris = resolve_track_uris(args.uris, playlist_client, metadata)
 
     if not all_track_uris:
         logger.error("No tracks resolved")
