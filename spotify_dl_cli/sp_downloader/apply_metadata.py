@@ -156,7 +156,10 @@ def apply_metadata(output_path: Path, format: AudioFile.Format, track: Track, ht
         picture.desc = "Cover"
         picture.data = cover_bytes
 
-        encoded = base64.b64encode(picture.write()).decode("ascii")
-        audio["metadata_block_picture"] = [encoded]
+        if isinstance(audio, FLAC):
+            audio.add_picture(picture)
+        else:
+            encoded = base64.b64encode(picture.write()).decode("ascii")
+            audio["metadata_block_picture"] = [encoded]
 
     audio.save()
